@@ -1,3 +1,3 @@
 # Encoder_mbed
 
-this code is origined from Alex
+I corrected Alex's Encoder code
