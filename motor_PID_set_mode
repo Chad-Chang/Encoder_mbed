@@ -1,0 +1,50 @@
+#include "PinNames.h"
+#include "QEncoder.h"
+#include "L298LIB.h"
+#include "encoder_names.h"
+#include "PID.h"
+#define EN D10
+#define IN1 D8
+#define IN2 D9
+#define DEG_TO_RAD (4.*atan(1.)/180.)
+#define SAMPLING_INTERVAL 1000
+#define PRINT_INTERVAL 10000
+#define dt (SAMPLING_INTERVAL/100000.f)
+
+PIDBasic pid(3.0F,0.0f, 0.01f,100.0f); // kp, ki, kd, imax
+L298LIB motor(EN,IN1,IN2);
+QEncoder  enco(D2,D3);
+Serial pc(USBTX,USBRX,230400);
+Timer tmr, tmr_prt;
+
+float r= 0.0f, y = 0.0f;
+float u;
+int main() 
+{
+    motor.setSpeed(0);
+    uint32_t cnt = 0;
+    tmr.start(); tmr_prt.start();
+    enco.init();
+    enco.setCount(0);
+
+    while(1) 
+    {
+        if(tmr.read_us()>SAMPLING_INTERVAL)
+        {
+            tmr.reset();
+            y = enco.getCount()*Encoder::ratio; // encoder value
+            u = pid.computePID(r,y,dt);
+            motor.run(u/255.f); // mapping함수가 필요해보임.
+            cnt ++;
+            if(cnt%2000==0)
+            {
+                if(r==0.0f) r = 180.f;
+                else r = 0.0f;
+            }
+        }
+        if(tmr_prt.read_us() > PRINT_INTERVAL){
+            tmr_prt.reset();
+            pc.printf("%.1f,%.1f,%.1f\n", r,y,u/255.f);
+        }
+    }
+}
